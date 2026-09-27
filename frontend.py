@@ -15,15 +15,15 @@ if hasattr(sys.stdout, "reconfigure"):
 
 import streamlit as st
 from graph.workflow import app as workflow_app
+from agents.utils import make_links_clickable
 
-DOCUMENTS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "data", "documents"))
-MAX_ITERATIONS = int(os.getenv("MAX_ITERATIONS", "2"))
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
+MAX_ITERATIONS = 4
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-flash-latest")
 
 st.set_page_config(
-    page_title="Research-X Control Center",
+    page_title="Research-X: Autonomous Multi-Agent Research System",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
 # Custom Dark Styling (Strictly No Emojis)
@@ -99,125 +99,39 @@ if "research_state" not in st.session_state:
     st.session_state.research_state = None
 if "is_running" not in st.session_state:
     st.session_state.is_running = False
-
-# Sidebar
-with st.sidebar:
-    st.markdown(
-        """
-        <div class="brand-badge">
-            <strong>Research-X Control Center</strong>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-    st.markdown("### System Configuration")
-    st.caption(f"Model: {GEMINI_MODEL} (Google Gemini)")
-    max_iter = st.slider("Max Verification Iterations", min_value=1, max_value=4, value=MAX_ITERATIONS)
-
-    st.divider()
-
-    st.markdown("### Internal Document Upload (RAG)")
-    uploaded_files = st.file_uploader(
-        "Upload files for internal research",
-        type=["txt", "md", "pdf", "json"],
-        accept_multiple_files=True
-    )
-    if uploaded_files:
-        os.makedirs(DOCUMENTS_DIR, exist_ok=True)
-        for uf in uploaded_files:
-            fpath = os.path.join(DOCUMENTS_DIR, uf.name)
-            with open(fpath, "wb") as f:
-                f.write(uf.getbuffer())
-        st.success(f"Indexed {len(uploaded_files)} document(s) for RAG.")
-
-    st.divider()
-
-    st.markdown("### Suggested Topics")
-    suggestions = [
-        "Compare PostgreSQL and MongoDB for a multi-tenant SaaS",
-        "Compare the latest open-source LLMs for building a production RAG application",
-        "Compare SQLite and DuckDB for local analytics",
-        "Evaluate Qdrant vs pgvector for scalable vector search"
-    ]
-
-    selected_query = None
-    for s in suggestions:
-        if st.button(s, use_container_width=True):
-            selected_query = s
-
-    st.divider()
-    st.markdown("### Demo Showcase")
-    if st.button("Load Pre-Generated Sample Report", use_container_width=True):
-        sample_path = os.path.join(os.path.dirname(__file__), "reports", "report_Compare_PostgreSQL_and_MongoDB.md")
-        report_text = ""
-        if os.path.exists(sample_path):
-            with open(sample_path, "r", encoding="utf-8") as f:
-                report_text = f.read()
-
-        st.session_state.research_state = {
-            "query": "Compare PostgreSQL and MongoDB for a multi-tenant SaaS",
-            "research_plan": [
-                {"title": "Multi-Tenant Architecture", "specialization": "Technical"},
-                {"title": "Performance & Scalability", "specialization": "Technical"},
-                {"title": "Licensing & TCO", "specialization": "Cost"}
-            ],
-            "research_tasks": [
-                {"description": "Investigate PostgreSQL row-level security and schema isolation", "status": "completed"},
-                {"description": "Benchmark MongoDB horizontal sharding under multi-tenant load", "status": "completed"},
-                {"description": "Analyze SSPL license restrictions vs PostgreSQL permissive license", "status": "completed"}
-            ],
-            "sources": [
-                {"title": "PostgreSQL SaaS Multi-Tenant Architecture Guide", "url": "https://devcerts.org/blog/postgresql-for-saas-tenant-isolation-rls-and-restore-strategy", "type": "web"},
-                {"title": "Multi-tenant SaaS partitioning models for PostgreSQL (AWS)", "url": "https://docs.aws.amazon.com/prescriptive-guidance/latest/saas-multitenant-managed-postgresql/partitioning-models.html", "type": "web"},
-                {"title": "MongoDB Benchmark Suite", "url": "https://www.mongodb.com/resources/compare/mongodb-benchmark", "type": "web"}
-            ],
-            "verified_claims": [
-                {"claim": "PostgreSQL supports shared tables with tenant_id, schema-per-tenant, and database-per-tenant models.", "evidence": "Documented in AWS multi-tenant prescriptive guidance and devcerts architecture guide.", "source_url": "https://docs.aws.amazon.com/prescriptive-guidance/latest/saas-multitenant-managed-postgresql/partitioning-models.html"},
-                {"claim": "PostgreSQL provides full ACID compliance critical for complex financial transactions in multi-tenant systems.", "evidence": "Verified across engine architectural specifications.", "source_url": "https://devcerts.org/blog/postgresql-for-saas-tenant-isolation-rls-and-restore-strategy"},
-                {"claim": "MongoDB operates under the Server Side Public License (SSPL) which places restrictions on commercial cloud hosting.", "evidence": "Confirmed via MongoDB licensing documentation.", "source_url": "https://github.com/mongodb/mongo-perf"}
-            ],
-            "rejected_claims": [
-                {"claim": "MongoDB does not support multi-document ACID transactions.", "reason": "Contradicted: MongoDB introduced multi-document ACID transactions starting in version 4.0."}
-            ],
-            "iteration": 1,
-            "max_iterations": 2,
-            "evidence_sufficient": True,
-            "final_report": report_text,
-            "logs": [
-                "[Planner] Generated 3 specialized research tracks: Technical, Performance, Licensing",
-                "[Researcher] Executed 3 web investigations across 6 primary sources",
-                "[Critic] Verified 3 claims; rejected 1 outdated claim regarding MongoDB transactions",
-                "[Critic] Evidence sufficiency check passed. Routing to Synthesizer",
-                "[Synthesizer] Compiled executive report with 6 indexed citations"
-            ]
-        }
-        st.session_state.is_running = False
-        st.rerun()
-
-    st.divider()
-    if st.button("Reset Session", use_container_width=True):
-        st.session_state.research_state = None
-        st.session_state.is_running = False
-        st.rerun()
+if "research_query" not in st.session_state:
+    st.session_state.research_query = ""
 
 # Main Interface
 st.title("Research-X: Autonomous Multi-Agent Research System")
-st.caption("Decomposes queries -> executes parallel research -> verifies evidence -> resolves gaps -> synthesizes citation-backed reports.")
+
+def start_research_callback():
+    if (st.session_state.get("research_query") or "").strip():
+        st.session_state.is_running = True
 
 query_input = st.text_area(
     "Enter Research Query:",
-    value=selected_query if selected_query else "",
-    placeholder="e.g. Compare the latest open-source LLMs for building a production RAG application.",
-    height=90
+    placeholder="e.g. Compare PostgreSQL and MongoDB for a multi-tenant SaaS application.",
+    height=90,
+    key="research_query",
+    disabled=st.session_state.is_running
 )
 
-start_clicked = st.button("Start Autonomous Research", type="primary", use_container_width=True)
+start_clicked = st.button(
+    "Research in Progress..." if st.session_state.is_running else "Start Research",
+    type="primary",
+    use_container_width=True,
+    disabled=st.session_state.is_running,
+    on_click=start_research_callback
+)
 
-if start_clicked and query_input.strip():
-    st.session_state.is_running = True
+if start_clicked and not (st.session_state.get("research_query") or "").strip():
+    st.warning("Please enter a research query to begin.")
+
+if st.session_state.is_running:
+    clean_query = (st.session_state.research_query or "").strip()
     initial_state = {
-        "query": query_input.strip(),
+        "query": clean_query,
         "research_plan": [],
         "research_tasks": [],
         "research_results": [],
@@ -226,7 +140,7 @@ if start_clicked and query_input.strip():
         "rejected_claims": [],
         "missing_information": [],
         "iteration": 0,
-        "max_iterations": max_iter,
+        "max_iterations": MAX_ITERATIONS,
         "evidence_sufficient": False,
         "final_report": "",
         "current_agent": "planner_agent",
@@ -234,20 +148,72 @@ if start_clicked and query_input.strip():
         "logs": []
     }
 
-    with st.spinner("Multi-agent workflow in progress... (Planning -> Research -> Verification -> Synthesis)"):
+    with st.status("Initializing research workflow...", expanded=True) as status_box:
         try:
-            final_result = workflow_app.invoke(initial_state)
+            final_result = initial_state
+            agent_display_names = {
+                "planner_agent": "Planner Agent (Decomposing research query into specialized tracks)",
+                "researcher_agent": "Researcher Agent (Executing web searches and evidence extraction)",
+                "critic_agent": "Critic Agent (Verifying claims and checking evidence sufficiency)",
+                "followup_agent": "Follow-up Agent (Formulating targeted follow-up research tasks)",
+                "synthesizer_agent": "Synthesizer Agent (Compiling citation-backed executive report)"
+            }
+            displayed_logs_count = 0
+            for step_state in workflow_app.stream(initial_state, stream_mode="values"):
+                final_result = step_state
+                curr_agent = step_state.get("current_agent", "")
+                if curr_agent in agent_display_names:
+                    status_box.update(label=f"Running: {agent_display_names[curr_agent]}")
+
+                current_logs = step_state.get("logs", [])
+                while displayed_logs_count < len(current_logs):
+                    status_box.write(f"- {current_logs[displayed_logs_count]}")
+                    displayed_logs_count += 1
+
             st.session_state.research_state = final_result
             st.session_state.is_running = False
+            status_box.update(label="Research completed successfully!", state="complete", expanded=False)
             st.success("Research completed successfully.")
+            st.rerun()
         except Exception as err:
             st.session_state.is_running = False
+            status_box.update(label="Research encountered an error", state="error", expanded=True)
             st.error(f"Error during research execution: {str(err)}")
+            st.rerun()
 
 # Results Display
 res = st.session_state.research_state
 if res:
     st.divider()
+
+    # Calculate sources consulted (fallback to references in report or verified claims if empty)
+    sources_count = len(res.get("sources", []))
+    if sources_count == 0:
+        report_text = res.get("final_report", "")
+        if report_text:
+            import re
+            ref_section = re.search(r"(?:###?\s*(?:References|Sources|Citations)[\s\S]*$)", report_text, re.IGNORECASE)
+            target_text = ref_section.group(0) if ref_section else report_text
+            ref_items = re.findall(r"(?:^|\n)\s*(?:\[\d+\]|\d+[\.\)])\s+[^\n]+", target_text)
+            if ref_items:
+                sources_count = len(ref_items)
+            else:
+                cits = set(re.findall(r"\[(\d+)\]", report_text))
+                if cits:
+                    sources_count = len(cits)
+                else:
+                    urls = set(re.findall(r"https?://[^\s\)\]]+", target_text))
+                    if urls:
+                        sources_count = len(urls)
+
+        if sources_count == 0:
+            verified_urls = {
+                vc.get("source_url")
+                for vc in res.get("verified_claims", [])
+                if vc.get("source_url") and vc.get("source_url") not in ("baseline", "None", "")
+            }
+            if verified_urls:
+                sources_count = len(verified_urls)
 
     # Metrics Row
     m1, m2, m3, m4 = st.columns(4)
@@ -265,7 +231,7 @@ if res:
         st.markdown(
             f"""
             <div class="metric-card">
-                <div class="metric-value">{len(res.get('sources', []))}</div>
+                <div class="metric-value">{sources_count}</div>
                 <div class="metric-label">Sources Consulted</div>
             </div>
             """,
@@ -294,26 +260,26 @@ if res:
 
     st.write("")
 
-    tab1, tab2, tab3, tab4 = st.tabs([
-        "Final Report",
+    tab1, tab2, tab3 = st.tabs([
+        "Research Response",
         "Verified Claims & Evidence",
-        "Sources & References",
         "System Trace"
     ])
 
     with tab1:
         report_md = res.get("final_report", "")
         if report_md:
-            st.markdown(report_md)
+            formatted_report = make_links_clickable(report_md)
+            st.markdown(formatted_report)
             st.download_button(
-                label="Download Markdown Report",
-                data=report_md,
-                file_name="research_report.md",
+                label="Download Response",
+                data=formatted_report,
+                file_name="research_response.md",
                 mime="text/markdown",
                 use_container_width=True
             )
         else:
-            st.info("No report generated.")
+            st.info("No response generated.")
 
     with tab2:
         verified = res.get("verified_claims", [])
@@ -321,12 +287,18 @@ if res:
 
         st.subheader(f"Verified Claims ({len(verified)})")
         for idx, vc in enumerate(verified, 1):
+            src_url = vc.get("source_url", "")
+            if src_url and src_url.startswith(("http://", "https://")):
+                source_display = f'<a href="{src_url}" target="_blank" style="color: #58a6ff; text-decoration: underline;">{src_url}</a>'
+            else:
+                source_display = src_url
+
             st.markdown(
                 f"""
                 <div class="claim-box">
                     <strong>Claim {idx}:</strong> {vc.get('claim')}<br>
                     <small style="color: #8b949e;">Evidence: {vc.get('evidence')}</small><br>
-                    <small style="color: #58a6ff;">Source: {vc.get('source_url')}</small>
+                    <small style="color: #58a6ff;">Source: {source_display}</small>
                 </div>
                 """,
                 unsafe_allow_html=True
@@ -346,16 +318,6 @@ if res:
                 )
 
     with tab3:
-        sources = res.get("sources", [])
-        st.subheader(f"Registered Sources ({len(sources)})")
-        for idx, s in enumerate(sources, 1):
-            with st.expander(f"[{idx}] {s.get('title', 'Source')}"):
-                st.write(f"**URL / Path:** {s.get('url')}")
-                st.write(f"**Type:** {s.get('type')}")
-                if s.get("snippet"):
-                    st.caption(f"**Snippet:** {s.get('snippet')}")
-
-    with tab4:
         st.subheader("Multi-Agent Execution Logs")
         logs = res.get("logs", [])
         for l in logs:

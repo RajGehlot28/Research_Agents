@@ -22,3 +22,18 @@ def parse_json_response(text: str):
             except json.JSONDecodeError:
                 pass
         return None
+
+def make_links_clickable(text: str) -> str:
+    if not text:
+        return ""
+
+    def replace_url(match):
+        url = match.group(1)
+        suffix = ""
+        while url and url[-1] in ".,;:!?":
+            suffix = url[-1] + suffix
+            url = url[:-1]
+        return f"[{url}]({url}){suffix}"
+
+    pattern = r"(?<!\]\()(?<!\[)(https?://[^\s\)\],]+)"
+    return re.sub(pattern, replace_url, text)

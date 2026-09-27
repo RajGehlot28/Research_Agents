@@ -7,14 +7,13 @@ from agents.followup_agent import followup_agent
 from agents.synthesizer_agent import synthesizer_agent
 
 def route_after_critic(state: ResearchState) -> str:
-    iteration = state.get("iteration", 0)
-    max_iter = state.get("max_iterations", 2)
+    iteration = state["iteration"]
+    max_iter = state["max_iterations"]
 
-    if state.get("evidence_sufficient", True):
+    if state["evidence_sufficient"] is True:
         return "synthesizer_agent"
 
     if iteration >= max_iter:
-        print(f"[Workflow] Max iterations ({max_iter}) reached. Routing to Synthesizer.")
         return "synthesizer_agent"
 
     return "followup_agent"

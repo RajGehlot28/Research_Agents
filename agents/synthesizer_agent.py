@@ -1,23 +1,46 @@
 from langchain_core.messages import SystemMessage, HumanMessage
 from graph.state import ResearchState
 from config.llm import get_llm, extract_text, invoke_with_retry
+from agents.utils import make_links_clickable
 
-SYSTEM_PROMPT = """You are a Synthesizer Agent in an autonomous multi-agent research system.
+SYSTEM_PROMPT = """You are an expert Synthesizer Agent in an autonomous multi-agent research system.
 Your job is to synthesize all verified claims, research findings, and sources into an exhaustive, highly structured, citation-backed research report.
 
-Report Formatting Guidelines:
-- Do NOT use any emojis. Keep the presentation professional, analytical, and objective.
-- Use numbered in-text citations like [1], [2], [3] corresponding to the sources provided.
-- Include the following clear markdown sections:
-  # Title & Executive Summary
-  ## Detailed Findings & Technical Analysis
-  ## Comparative Analysis & Trade-offs
-  ## Practical & Operational Considerations
-  ## Recommendations & Conclusion
-  ## References & Citations
+You MUST format the report using these exact sections:
 
-Under '## References & Citations', list each source with its citation number, title, and URL (e.g. `[1] Title - URL`).
-Ensure the findings directly answer the original query and reflect the verified facts.
+Title & Executive Summary
+[A clear title followed by comprehensive executive summary paragraphs explaining the foundational decision, core comparative analysis, technical trade-offs, and operational takeaways.]
+
+Detailed Findings & Technical Analysis
+[Detailed subheadings for each primary technology/architectural area. Provide in-depth technical paragraphs explaining architectural patterns, isolation pathways, scalability limitations, data integrity mechanisms, and benchmarks with citations.]
+
+Comparative Analysis & Trade-offs
+[Include a comprehensive Markdown comparison table comparing key dimensions, for example:
+| Feature / Dimension | [Option A] | [Option B] |
+Follow the table with detailed paragraphs analyzing critical trade-offs such as licensing constraints (e.g. SSPL vs permissive licenses), data consistency, and operational complexities.]
+
+Practical & Operational Considerations
+[Detailed subsections on:
+- Cloud Hosting and Free Tiers (compare cloud provider instances, storage, and free tier limitations)
+- Operational Risks and Mitigation (concrete, actionable mitigations for identified architectural risks)]
+
+Recommendations & Conclusion
+[Actionable strategic guidance divided into:
+- When to Choose [Option A] (criteria and specific Implementation Strategy)
+- When to Choose [Option B] (criteria and specific Implementation Strategy)]
+
+References & Citations
+[A clean, numbered list of all consulted sources with clickable Markdown links for valid URLs, in the format:
+[X] Title
+URL: [URL](URL) (or if no URL is available: URL: baseline)
+]
+
+Formatting Guidelines:
+- Write in rich, rigorous, articulate technical prose with high factual density.
+- Do NOT use emojis.
+- Use numbered in-text citations like [1], [2] corresponding to the sources provided.
+- Format all URLs in the References & Citations section as clickable Markdown links: `URL: [https://...](https://...)`.
+- Ensure all claims directly answer the research question based on the verified evidence.
 """
 
 def synthesizer_agent(state: ResearchState) -> dict:
@@ -26,14 +49,15 @@ def synthesizer_agent(state: ResearchState) -> dict:
     sources = state.get("sources", [])
     logs = list(state.get("logs", []))
 
-    print(f"[Synthesizer Agent] Generating final report with {len(verified)} verified claims and {len(sources)} sources...")
-
     # Build reference mapping
     source_map_text = []
     for idx, s in enumerate(sources, 1):
         title = s.get("title", "Reference")
         url = s.get("url", "")
-        source_map_text.append(f"[{idx}] {title} - {url}")
+        if url and url.startswith("http"):
+            source_map_text.append(f"[{idx}] {title}\nURL: [{url}]({url})")
+        else:
+            source_map_text.append(f"[{idx}] {title}\nURL: {url or 'baseline'}")
 
     references_block = "\n".join(source_map_text) if source_map_text else "No external sources registered."
 
@@ -48,15 +72,17 @@ def synthesizer_agent(state: ResearchState) -> dict:
         f"Available Sources for Citations:\n{references_block}\n"
     )
 
-    llm = get_llm()
+    llm = get_llm("synthesizer")
     response = invoke_with_retry(llm, [
         SystemMessage(content=SYSTEM_PROMPT),
         HumanMessage(content=prompt)
     ])
 
     report = extract_text(response)
-    print("[Synthesizer Agent] Final report generated successfully.")
-    logs.append("[Synthesizer] Generated final citation-backed report.")
+    report = make_links_clickable(report)
+    log_msg = "[Synthesizer] Generated final citation-backed report."
+    logs.append(log_msg)
+    print(log_msg, flush=True)
 
     return {
         "final_report": report,

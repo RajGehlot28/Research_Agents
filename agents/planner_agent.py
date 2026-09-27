@@ -27,9 +27,8 @@ Return ONLY a JSON object with this exact structure (no markdown fences, no conv
 
 def planner_agent(state: ResearchState) -> dict:
     query = state["query"]
-    print(f"[Planner Agent] Analyzing query: {query}")
 
-    llm = get_llm()
+    llm = get_llm("planner")
     prompt = f"Research Query: {query}"
 
     response = invoke_with_retry(llm, [
@@ -74,12 +73,10 @@ def planner_agent(state: ResearchState) -> dict:
     for t in tasks:
         t["status"] = "pending"
 
-    print(f"[Planner Agent] Generated {len(tasks)} research tasks.")
-    for t in tasks:
-        print(f"  - [{t['role']}] {t['title']}")
-
     logs = state.get("logs", [])
-    logs.append(f"[Planner] Created plan with {len(tasks)} tasks.")
+    log_msg = f"[Planner] Created plan with {len(tasks)} tasks."
+    logs.append(log_msg)
+    print(log_msg, flush=True)
 
     return {
         "research_plan": [{"summary": plan_summary, "total_tasks": len(tasks)}],

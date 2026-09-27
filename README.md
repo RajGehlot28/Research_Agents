@@ -18,9 +18,9 @@ An autonomous multi-agent research and intelligence platform powered by **LangGr
 
 - **Cyclic Agentic Workflow**: StateGraph architecture featuring reflection, evidence verification, and dynamic follow-up research loops rather than naive sequential chains.
 - **Fact Verification & Adversarial Critic**: Automatically validates retrieved evidence against source documents, cross-checks claims, detects contradictions, and rejects unsubstantiated assertions.
-- **Hybrid Retrieval (Web + Document RAG)**: Combines real-time web search (DuckDuckGo), deep HTTP HTML scraping, internal document indexing (`.pdf`, `.md`, `.txt`), and an AST-based safe mathematical evaluation engine.
+- **Web-Scale Deep Retrieval**: Combines real-time web search (DuckDuckGo), deep HTTP HTML scraping, and an AST-based safe mathematical evaluation engine.
 - **Enterprise Resilience**: Multi-key Gemini API auto-rotation with exponential backoff retry mechanism to prevent rate-limiting and quota interruptions.
-- **Interactive Control Center**: Real-time Streamlit dashboard with one-click demo showcase, document uploads, live agent traces, and formatted report export.
+- **Interactive Control Center**: Real-time Streamlit dashboard with live agent traces and formatted report export.
 
 ---
 
@@ -34,7 +34,6 @@ flowchart TD
     subgraph ToolRegistry [Tool & Retrieval Layer]
         Researcher --> WebSearch[Web Search\nDuckDuckGo API]
         Researcher --> WebFetch[Web Scraping\nHTTPX + BeautifulSoup]
-        Researcher --> LocalRAG[Internal Document RAG\nPDF / MD / TXT / JSON]
         Researcher --> Calc[Safe Math Engine\nAST Safe Evaluation]
     end
 
@@ -81,7 +80,6 @@ Research-Agents/
 ├── tools/
 │   ├── search_tool.py       # DuckDuckGo integration
 │   ├── fetch_tool.py        # Web text extractor with tag stripping
-│   ├── document_tool.py     # Local corpus keyword/semantic scanner
 │   └── calculator_tool.py   # AST-based sandboxed arithmetic evaluator
 ├── docs/images/             # UI screenshots and architecture graphics
 ├── reports/                 # Auto-saved research reports in Markdown
@@ -113,7 +111,7 @@ pip install -r requirements.txt
 
 Create a `.env` file from `.env.example`:
 ```ini
-GOOGLE_API_KEY=your_gemini_api_key_here  # Supports comma-separated keys for auto-rotation
+GEMINI_API_KEY=your_gemini_api_key_here  # Supports comma-separated keys for auto-rotation
 GEMINI_MODEL=gemini-flash-latest
 MAX_ITERATIONS=2
 MAX_SEARCH_RESULTS=5
@@ -147,7 +145,7 @@ If you are featuring this project on your resume, LinkedIn, or portfolio:
 > **Autonomous Multi-Agent Research System (LangGraph, Streamlit, Python)**
 > * Engineered an autonomous research platform using **LangGraph** orchestrating 5 specialized agents (Planner, Researcher, Critic, Follow-up, Synthesizer) with stateful cyclic graph execution.
 > * Implemented evidence verification and iterative self-correction loops, automatically rejecting unsubstantiated claims and querying targeted follow-ups before report synthesis.
-> * Integrated multi-source retrieval combining DuckDuckGo search, HTML text scraping, and local document RAG with an AST-based safe evaluation engine.
+> * Comprehensive web retrieval combining DuckDuckGo search, deep HTML scraping, and an AST-based safe evaluation engine.
 > * Built production-ready infrastructure featuring Gemini API multi-key auto-rotation with exponential backoff and a real-time Streamlit dashboard with citation tracking.
 
 ---

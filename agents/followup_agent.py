@@ -33,9 +33,6 @@ def followup_agent(state: ResearchState) -> dict:
     rejected = state.get("rejected_claims", [])
     tasks = list(state.get("research_tasks", []))
     logs = list(state.get("logs", []))
-
-    print(f"[Follow-up Agent] Generating follow-up tasks (Iteration {iteration})...")
-
     missing_text = "\n".join([f"- {m}" for m in missing]) if missing else "General depth and verification required."
     rejected_text = "\n".join([f"- {r.get('claim')}: {r.get('reason')}" for r in rejected]) if rejected else "None"
 
@@ -45,7 +42,7 @@ def followup_agent(state: ResearchState) -> dict:
         f"Rejected Claims to Re-examine:\n{rejected_text}\n"
     )
 
-    llm = get_llm()
+    llm = get_llm("followup")
     response = invoke_with_retry(llm, [
         SystemMessage(content=SYSTEM_PROMPT),
         HumanMessage(content=prompt)
@@ -70,11 +67,9 @@ def followup_agent(state: ResearchState) -> dict:
         t["status"] = "pending"
         tasks.append(t)
 
-    print(f"[Follow-up Agent] Added {len(new_tasks)} new follow-up tasks.")
-    for t in new_tasks:
-        print(f"  - [{t['role']}] {t['title']}")
-
-    logs.append(f"[Follow-up] Iteration {iteration}: added {len(new_tasks)} follow-up tasks.")
+    log_msg = f"[Follow-up] Iteration {iteration}: added {len(new_tasks)} follow-up tasks."
+    logs.append(log_msg)
+    print(log_msg, flush=True)
 
     return {
         "research_tasks": tasks,

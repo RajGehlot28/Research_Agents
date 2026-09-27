@@ -45,8 +45,6 @@ def critic_agent(state: ResearchState) -> dict:
     max_iterations = state.get("max_iterations", 2)
     logs = list(state.get("logs", []))
 
-    print(f"[Critic Agent] Verifying evidence (Iteration {iteration}/{max_iterations})...")
-
     # Aggregate all claims collected across all tasks
     all_claims = []
     for r in results:
@@ -61,8 +59,9 @@ def critic_agent(state: ResearchState) -> dict:
             })
 
     if not all_claims:
-        print("[Critic Agent] No claims found to evaluate. Requesting follow-up research.")
-        logs.append("[Critic] No claims found; flagged as insufficient.")
+        log_msg = "[Critic] Verification complete: 0 verified, 0 rejected. Status: Insufficient (Follow-up needed)."
+        logs.append(log_msg)
+        print(log_msg, flush=True)
         return {
             "verified_claims": [],
             "rejected_claims": [],
@@ -83,7 +82,7 @@ def critic_agent(state: ResearchState) -> dict:
         f"Collected Claims and Evidence:\n{claims_text}"
     )
 
-    llm = get_llm()
+    llm = get_llm("critic")
     response = invoke_with_retry(llm, [
         SystemMessage(content=SYSTEM_PROMPT),
         HumanMessage(content=prompt)
@@ -107,15 +106,13 @@ def critic_agent(state: ResearchState) -> dict:
 
     # If reached max iterations, force sufficient so synthesis can run
     if iteration >= max_iterations and not sufficient:
-        print(f"[Critic Agent] Reached max iterations ({max_iterations}). Proceeding to synthesis with best available evidence.")
         sufficient = True
         critique += f" [Max iterations ({max_iterations}) reached - proceeding to report synthesis.]"
 
     status_str = "Sufficient" if sufficient else "Insufficient (Follow-up needed)"
-    print(f"[Critic Agent] Verification complete: {len(verified)} verified, {len(rejected)} rejected, {len(missing)} gaps.")
-    print(f"[Critic Agent] Decision: {status_str}")
-
-    logs.append(f"[Critic] Verification complete: {len(verified)} verified, {len(rejected)} rejected. Status: {status_str}.")
+    log_msg = f"[Critic] Verification complete: {len(verified)} verified, {len(rejected)} rejected. Status: {status_str}."
+    logs.append(log_msg)
+    print(log_msg, flush=True)
 
     return {
         "verified_claims": verified,
