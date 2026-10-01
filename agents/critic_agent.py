@@ -40,10 +40,10 @@ Return ONLY a JSON object with this exact structure:
 
 def critic_agent(state: ResearchState) -> dict:
     query = state["query"]
-    results = state.get("research_results", [])
-    iteration = state.get("iteration", 0)
-    max_iterations = state.get("max_iterations", 2)
-    logs = list(state.get("logs", []))
+    results = state["research_results"]
+    iteration = state["iteration"]
+    max_iterations = state["max_iterations"]
+    logs = list(state["logs"])
 
     # Aggregate all claims collected across all tasks
     all_claims = []
@@ -52,16 +52,15 @@ def critic_agent(state: ResearchState) -> dict:
         for c in r.get("claims", []):
             all_claims.append({
                 "task": task_title,
-                "claim": c.get("claim", ""),
-                "evidence": c.get("evidence", ""),
-                "source_url": c.get("source_url", ""),
-                "confidence": c.get("confidence", "medium")
+                "claim": c["claim"],
+                "evidence": c["evidence"],
+                "source_url": c["source_url"],
+                "confidence": c["confidence"]
             })
 
     if not all_claims:
-        log_msg = "[Critic] Verification complete: 0 verified, 0 rejected. Status: Insufficient (Follow-up needed)."
+        log_msg = "[Critic Agent] Verification complete: 0 verified, 0 rejected. Status: Insufficient (Follow-up needed)."
         logs.append(log_msg)
-        print(log_msg, flush=True)
         return {
             "verified_claims": [],
             "rejected_claims": [],
@@ -112,7 +111,7 @@ def critic_agent(state: ResearchState) -> dict:
     status_str = "Sufficient" if sufficient else "Insufficient (Follow-up needed)"
     log_msg = f"[Critic] Verification complete: {len(verified)} verified, {len(rejected)} rejected. Status: {status_str}."
     logs.append(log_msg)
-    print(log_msg, flush=True)
+    print(log_msg)
 
     return {
         "verified_claims": verified,

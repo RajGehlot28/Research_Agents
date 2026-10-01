@@ -1,48 +1,17 @@
 import os
-import re
-import sys
 import time
-import warnings
 from dotenv import load_dotenv
-
-os.environ.setdefault("PYTHONIOENCODING", "utf-8")
-
-# Suppress AFC warnings
-class _FilteredStream:
-    def __init__(self, target):
-        self._target = target
-    def write(self, s):
-        if "automatic function calling" in s or "AFC" in s:
-            return
-        if self._target:
-            self._target.write(s)
-    def flush(self):
-        if self._target:
-            self._target.flush()
-    def __getattr__(self, name):
-        return getattr(self._target, name)
-
-if sys.stderr and not isinstance(sys.stderr, _FilteredStream):
-    sys.stderr = _FilteredStream(sys.stderr)
-if sys.stdout and not isinstance(sys.stdout, _FilteredStream):
-    sys.stdout = _FilteredStream(sys.stdout)
-
-warnings.filterwarnings("ignore")
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 load_dotenv()
 
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") # if role specific api key is not available it will be used
 
-
-def get_llm(role: str = "default", temperature: float = 0.2):
-    from langchain_google_genai import ChatGoogleGenerativeAI
-
+def get_llm(role: str, temperature: float = 0.2):
     # Use role-specific key if available, otherwise fall back to GEMINI_API_KEY
-    role_key = f"{role.upper()}_API_KEY" if role else ""
-    api_key = os.getenv(role_key, "").strip() if role_key else ""
-    if not api_key:
-        api_key = GEMINI_API_KEY
+    role_key = f"{role.upper()}_API_KEY"
+    api_key = os.getenv(role_key)
 
     if not api_key:
         raise ValueError(f"No API key found. Set {role_key} or GEMINI_API_KEY in .env")
@@ -56,35 +25,18 @@ def get_llm(role: str = "default", temperature: float = 0.2):
     )
 
 
-def invoke_with_retry(llm, messages, max_attempts: int = 4):
+def invoke_with_retry(llm, messages):
+    max_attempts = 5
     last_err = None
-
     for attempt in range(max_attempts):
         try:
             return llm.invoke(messages)
         except Exception as e:
-            last_err = e
-            msg = str(e)
-
-            if "RESOURCE_EXHAUSTED" in msg or "429" in msg or "rate_limit" in msg.lower():
-                delay_match = (
-                    re.search(r"retry in\s+([0-9\.]+)\s*s", msg, re.IGNORECASE)
-                    or re.search(r"retryDelay['\":\s]+([0-9\.]+)\s*s", msg, re.IGNORECASE)
-                    or re.search(r"try again in\s+([0-9\.]+)\s*s", msg, re.IGNORECASE)
-                )
-                wait_sec = min(float(delay_match.group(1)) + 1.5, 60.0) if delay_match else min(3.0 * (attempt + 1), 20.0)
-                print(f"[LLM Rate Limit] Waiting {wait_sec:.1f}s (attempt {attempt + 1}/{max_attempts})...", flush=True)
+                last_err = e
+                # if llm api call failed then retrying after 2 sec
+                wait_sec = 2.0
+                print(f"LLM Server unavailable. Retrying in {wait_sec}s...")
                 time.sleep(wait_sec)
-
-            elif "503" in msg or "UNAVAILABLE" in msg or "overloaded" in msg or "Server disconnected" in msg:
-                wait = 2.0 * (attempt + 1)
-                print(f"[LLM] Server unavailable. Retrying in {wait:.1f}s...", flush=True)
-                time.sleep(wait)
-
-            else:
-                wait = 2.0 * (attempt + 1)
-                print(f"[LLM] Retrying after: {msg[:80]}... in {wait}s", flush=True)
-                time.sleep(wait)
 
     raise RuntimeError(f"LLM call failed after {max_attempts} attempts: {last_err}")
 
@@ -96,4 +48,4 @@ def extract_text(response) -> str:
             block.get("text", "") if isinstance(block, dict) else str(block)
             for block in content
         ).strip()
-    return str(content).strip()
+    return content

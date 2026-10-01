@@ -27,12 +27,12 @@ Return ONLY a JSON object with this exact structure:
 """
 
 def followup_agent(state: ResearchState) -> dict:
-    iteration = state.get("iteration", 0) + 1
+    iteration = state["iteration"] + 1
     query = state["query"]
-    missing = state.get("missing_information", [])
-    rejected = state.get("rejected_claims", [])
-    tasks = list(state.get("research_tasks", []))
-    logs = list(state.get("logs", []))
+    missing = state["missing_information"]
+    rejected = state["rejected_claims"]
+    tasks = list(state["research_tasks"])
+    logs = list(state["logs"])
     missing_text = "\n".join([f"- {m}" for m in missing]) if missing else "General depth and verification required."
     rejected_text = "\n".join([f"- {r.get('claim')}: {r.get('reason')}" for r in rejected]) if rejected else "None"
 
@@ -51,7 +51,7 @@ def followup_agent(state: ResearchState) -> dict:
     parsed = parse_json_response(extract_text(response))
 
     if parsed and "new_tasks" in parsed:
-        new_tasks = parsed.get("new_tasks", [])
+        new_tasks = parsed["new_tasks"]
     else:
         new_tasks = [
             {
@@ -69,7 +69,7 @@ def followup_agent(state: ResearchState) -> dict:
 
     log_msg = f"[Follow-up] Iteration {iteration}: added {len(new_tasks)} follow-up tasks."
     logs.append(log_msg)
-    print(log_msg, flush=True)
+    print(log_msg)
 
     return {
         "research_tasks": tasks,

@@ -39,44 +39,18 @@ def planner_agent(state: ResearchState) -> dict:
     raw_text = extract_text(response)
     data = parse_json_response(raw_text)
 
-    if not data or "tasks" not in data:
-        # Fallback plan if JSON parsing failed
-        tasks = [
-            {
-                "id": "task_1",
-                "title": "Technical Architecture and Capabilities",
-                "description": f"Analyze technical details for {query}",
-                "role": "Technical Researcher",
-                "search_queries": [f"{query} architecture", f"{query} benchmarks"]
-            },
-            {
-                "id": "task_2",
-                "title": "Market Adoption and Ecosystem",
-                "description": f"Investigate adoption and production usage for {query}",
-                "role": "Market Researcher",
-                "search_queries": [f"{query} production adoption", f"{query} ecosystem"]
-            },
-            {
-                "id": "task_3",
-                "title": "Cost and Practicality",
-                "description": f"Evaluate operational costs and complexity for {query}",
-                "role": "Cost/Practicality Researcher",
-                "search_queries": [f"{query} pricing cost", f"{query} operational trade-offs"]
-            }
-        ]
-        plan_summary = f"Default multi-angle research plan for: {query}"
-    else:
-        tasks = data.get("tasks", [])
-        plan_summary = data.get("plan_summary", "Structured research plan generated.")
+    tasks = data["tasks"]
+    plan_summary = data["plan_summary"]
 
     # Mark all tasks as pending
     for t in tasks:
         t["status"] = "pending"
 
-    logs = state.get("logs", [])
-    log_msg = f"[Planner] Created plan with {len(tasks)} tasks."
+    # storing logs to display on frontend
+    logs = state["logs"]
+    log_msg = f"[Planner Agent] Created plan with {len(tasks)} tasks."
     logs.append(log_msg)
-    print(log_msg, flush=True)
+    print(log_msg)
 
     return {
         "research_plan": [{"summary": plan_summary, "total_tasks": len(tasks)}],

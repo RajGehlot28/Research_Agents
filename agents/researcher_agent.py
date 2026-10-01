@@ -10,7 +10,7 @@ Your job is to analyze gathered research materials (web snippets and fetched pag
 
 Role Guidelines:
 - Extract factual, concrete claims with direct evidence.
-- Identify specific metrics, benchmarks, architectural attributes, or costs where present.
+- Identify specific metrics, benchmarks, architectural attributes or costs where present.
 - Every claim MUST reference a source from the provided material.
 - Do not invent claims not backed by the text.
 
@@ -30,10 +30,10 @@ Return ONLY a JSON object with this exact structure:
 """
 
 def researcher_agent(state: ResearchState) -> dict:
-    tasks = state.get("research_tasks", [])
-    results = list(state.get("research_results", []))
-    sources = list(state.get("sources", []))
-    logs = list(state.get("logs", []))
+    tasks = state["research_tasks"]
+    results = list(state["research_results"])
+    sources = list(state["sources"])
+    logs = list(state["logs"])
     existing_urls = {s.get("url") for s in sources if s.get("url")}
 
     llm = get_llm("researcher")
@@ -44,10 +44,10 @@ def researcher_agent(state: ResearchState) -> dict:
         return {"current_agent": "critic_agent"}
 
     for task in pending_tasks:
-        role = task.get("role", "Technical Researcher")
-        title = task.get("title", "")
-        task_id = task.get("id", "")
-        queries = task.get("search_queries", [title])
+        role = task["role"]
+        title = task["title"]
+        task_id = task["id"]
+        queries = task["search_queries"]
 
         # Gather web search results
         search_hits = []
@@ -57,7 +57,7 @@ def researcher_agent(state: ResearchState) -> dict:
 
         # Register sources
         for hit in search_hits:
-            url = hit.get("url")
+            url = hit.get("url", "")
             if url and url not in existing_urls:
                 existing_urls.add(url)
                 sources.append({
@@ -68,7 +68,7 @@ def researcher_agent(state: ResearchState) -> dict:
                     "type": "web"
                 })
 
-        # Optionally fetch the top web page if available
+        # fetch the top web page if available
         fetched_content = ""
         if search_hits and search_hits[0].get("url"):
             top_url = search_hits[0]["url"]
@@ -83,7 +83,7 @@ def researcher_agent(state: ResearchState) -> dict:
 
         if fetched_content and not fetched_content.startswith("Error"):
             context_blocks.append("--- Fetched Page Content ---")
-            context_blocks.append(fetched_content[:2500])
+            context_blocks.append(fetched_content[:3000])
 
         raw_context = "\n".join(context_blocks)
         if not raw_context.strip():
@@ -129,7 +129,7 @@ def researcher_agent(state: ResearchState) -> dict:
 
         log_msg = f"[{role}] Completed task '{title}' ({len(claims)} claims)."
         logs.append(log_msg)
-        print(log_msg, flush=True)
+        print(log_msg)
 
     return {
         "research_tasks": tasks,

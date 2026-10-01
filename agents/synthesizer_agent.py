@@ -52,19 +52,16 @@ def synthesizer_agent(state: ResearchState) -> dict:
     # Build reference mapping
     source_map_text = []
     for idx, s in enumerate(sources, 1):
-        title = s.get("title", "Reference")
-        url = s.get("url", "")
-        if url and url.startswith("http"):
-            source_map_text.append(f"[{idx}] {title}\nURL: [{url}]({url})")
-        else:
-            source_map_text.append(f"[{idx}] {title}\nURL: {url or 'baseline'}")
+        title = s["title"]
+        url = s["url"]
+        source_map_text.append(f"[{idx}] {title}\nURL: [{url}]({url})")
 
     references_block = "\n".join(source_map_text) if source_map_text else "No external sources registered."
 
     claims_text = "\n".join([
         f"- Claim: {v.get('claim')}\n  Evidence: {v.get('evidence')}\n  Source: {v.get('source_url')}"
         for v in verified
-    ]) if verified else "Rely on verified foundation knowledge."
+    ])
 
     prompt = (
         f"Research Question: {query}\n\n"
@@ -80,9 +77,9 @@ def synthesizer_agent(state: ResearchState) -> dict:
 
     report = extract_text(response)
     report = make_links_clickable(report)
-    log_msg = "[Synthesizer] Generated final citation-backed report."
+    log_msg = "[Synthesizer Agent] Generated final citation-backed report."
     logs.append(log_msg)
-    print(log_msg, flush=True)
+    print(log_msg)
 
     return {
         "final_report": report,

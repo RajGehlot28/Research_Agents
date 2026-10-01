@@ -1,4 +1,4 @@
-from typing import TypedDict, Optional
+from typing import TypedDict
 
 class ResearchState(TypedDict):
     query: str
@@ -13,6 +13,6 @@ class ResearchState(TypedDict):
     max_iterations: int
     evidence_sufficient: bool
     final_report: str
-    current_agent: Optional[str]
-    status: Optional[str]
+    current_agent: str
+    status: str
     logs: list
